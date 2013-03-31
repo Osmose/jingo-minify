@@ -135,21 +135,29 @@ def css(bundle, media=False, debug=settings.TEMPLATE_DEBUG):
                  getattr(settings, 'LESS_PREPROCESS', False)) or
                 item.endswith(('.sass', '.scss', '.styl'))):
                 compile_css(item)
-                items.append('%s.css' % item)
+                items.append('%s.css' % item, 'stylesheet')
+            elif item.endswith('.less'):
+                items.append((item, 'stylesheet/less'))
             else:
-                items.append(item)
+                items.append((item, 'stylesheet'))
         # Add timestamp to avoid caching.
-        items = ['%s?build=%s' % (item, _get_mtime(item)) for item in items]
+        items = [('%s?build=%s' % (item[0], _get_mtime(item[0])), item[1]) for item in items]
     else:
         build_id = BUILD_ID_CSS
         bundle_full = "css:%s" % bundle
         if bundle_full in BUNDLE_HASHES:
             build_id = BUNDLE_HASHES[bundle_full]
 
-        items = ('css/%s-min.css?build=%s' % (bundle, build_id,),)
+        items = (('css/%s-min.css?build=%s' % (bundle, build_id,),
+                 'stylesheet'),)
 
-    return _build_html(items,
-            '<link rel="stylesheet" media="%s" href="%%s" />' % media)
+    return jinja2.Markup('\n'.join((
+        '<link rel="%s" media="%s" href="%s" />' % (
+            item[1],
+            media,
+            _get_item_path(item[0])
+        ) for item in items)
+    ))
 
 
 def ensure_path_exists(path):
